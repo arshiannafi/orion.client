@@ -65,7 +65,7 @@ collab/web
 
 ![Orion shared workspace diagram (client)]()
 
-	TODO: 
+	TODO:
     1. Full UI for invite/share
     2. Single user mode collaboration
     3. (Bug) File operations from collab peers shouldn't close the current user's context menu
@@ -101,43 +101,42 @@ Clients connect to the server with a session ID that represents the selected pro
 
 ![WebSocket example diagram](./img/hub_server.jpg)
 
-	TODO: 
+	TODO:
     1. Make it easy to switch between WebSocket implementation (i.e. socketIO)
     2. Make generic send message method (related to point number 1)
     3. Give client notice if file load/save fails
 
 ### <a name="auth-section"></a>Authentication
 A JSON webtoken is generated using a secret and including the username in the payload on user login. The token is saved in the browser local storage and sent to the websocket server upon connection. The websocket server decodes the token and ensures the person is infact an Orion user.
-    
+
 This requires that the Orion server (orion.conf) and WebSocket server (config file) both have the same JWT secret.
 
 ![Auth diagram](./img/Auth_diagram.png)
 
-	TODO: 
+	TODO:
     1. The socket server should send the decoded user to the orion server in order to ensure that the user is allowed to the particular project they are trying to access.
-    2. Test for all authentication flows (github, google, etc.) 
+    2. Test for all authentication flows (github, google, etc.)
     3. Let jwt be stored in httpOnly cookie instead of localStorage for security reason. This requires the ws server to run under the same domain as the orion server. The ws server can get the authentication token from the cookie in the ws handshake request. As a side effect, this also simplifies the authentication steps because the ws connection got authnticated as soon as the connection is established.
 
 ### Setting up Collab mode
-1. Ensure the jwt secret is the same on both Orion and the WS Server.
-2. Link the WS server to Orion by setting the Orion url in the config file.
-3. Link Orion client to WS server by adding this in defaults.pref: "/collab": { "hubUrl": "YOUR_URL" }.
-4. Add `./bundles/org.eclipse.orion.client.collab/web` to `append.static.assets` in `orion.conf`.
-5. Add this endpoint at additional.endpoint in orion.conf: 
-~~~json
-{
+1. Add `"collab/plugins/collabPlugin.html": true` in bundles/org.eclipse.orion.client.ui/web/defaults.pref
+2. In orion.conf, change:
+    1. `orion.jwt.secret=` to `orion.jwt.secret=orion collab`
+    2. `orion.single.user=true` to `orion.single.user=false`
+    3. `append.static.assets=` to `append.static.assets=./bundles/org.eclipse.orion.client.collab/web`
+    4. `additional.endpoint=` to `additional.endpoint=./endpoint.json`
+3. Create a json file in modules/orionode/ called "endpoint.json" and paste the following:
+```json
+[{
     "endpoint": "/sharedWorkspace",
     "module": "./lib/sharedWorkspace",
     "extraOptions": {
         "root": "/sharedWorkspace/tree/file",
         "fileRoot": "/file"
     }
-}
-~~~
-6. Enable `collab/plugins/collabPlugin.html` plugin by adding it to defaults.pref.
-7. Run both servers.
-8. Log in to Orion.
-9. That's it :)
+}]
+```
+4. That's it :)
 
 [shared workspace]: #sw-section
 [client side]: #cs-section
