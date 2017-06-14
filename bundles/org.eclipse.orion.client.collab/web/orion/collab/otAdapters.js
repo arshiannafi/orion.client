@@ -552,7 +552,7 @@ define(['orion/collab/collabPeer', 'orion/collab/ot', 'orion/uiUtils'], function
     };
 
     OrionEditorAdapter.prototype.getSelection = function () {
-        return ot.Selection.createCursor(this.editor.getSelection().start);
+        return new ot.Selection([new ot.Selection.Range(this.editor.getSelection().start, this.editor.getSelection().end)]);
     };
 
     OrionEditorAdapter.prototype.setSelection = function (selection) {
