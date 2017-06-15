@@ -610,7 +610,12 @@ define(['orion/collab/collabPeer', 'orion/collab/ot', 'orion/uiUtils'], function
         if (this.changeInProgress) {
             this.selectionChanged = true;
         } else {
-            this.trigger('selectionChange');
+            if(!this.editor._listener.mouseDown){
+              // Trigger 'selectionChange' (send messges) only if mouse is up.
+              // This prevents from sending multiple messages
+              // while user is selecting.
+              this.trigger('selectionChange');
+            }
         }
     };
 
