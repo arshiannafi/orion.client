@@ -586,14 +586,16 @@ define(['orion/collab/collabPeer', 'orion/collab/ot', 'orion/uiUtils'], function
         var lastLine = this.model.getLineCount()-1;
         var lineStartOffset = this.model.getLineStart(currLine);
 
-        if (offset) {
-            //decide whether or not it is worth sending (if line has changed or needs updating).
-            if (currLine !== this.myLine || currLine === lastLine || currLine === 0) {
-                // Send this change
-            } else {
-                return;
-            }
-        }
+        // TODO @arshiannafi dicuss the decision then delete the code
+        //
+        // if (offset) {
+        //     //decide whether or not it is worth sending (if line has changed or needs updating).
+        //     if (currLine !== this.myLine || currLine === lastLine || currLine === 0) {
+        //         // Send this change
+        //     } else {
+        //         return;
+        //     }
+        // }
 
         this.myLine = currLine;
 
