@@ -631,13 +631,29 @@ define(['orion/collab/collabPeer', 'orion/collab/ot', 'orion/uiUtils'], function
         var peer = this.collabClient.getPeer(clientId);
         var name = peer ? peer.name : undefined;
         color = peer ? peer.color : color;
+        
         this.updateLineAnnotation(clientId, selection, name, color);
+        this.updateCursorView(clientId, selection, name, color);
+        
         var self = this;
         return {
             clear: function() {
                 self.destroyCollabAnnotations(clientId);
             }
         };
+    };
+
+    OrionEditorAdapter.prototype.updateCursorView = function(id, selection, name, color, force) {
+      
+      // Extracting 'highlight' information out of 'selection' object
+      var ranges = selection.ranges[0];
+      
+      // get text view of collab clinet
+      var textView = this.collabClient.textView;
+      
+      // selection
+      textView.setSelection(ranges.anchor, ranges.head);
+      
     };
 
     OrionEditorAdapter.prototype.updateLineAnnotation = function(id, selection, name, color, force) {
