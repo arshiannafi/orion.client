@@ -8035,6 +8035,9 @@ define("orion/editor/textView", [  //$NON-NLS-1$
     // sel1Div.style.width = Math.max(0, sel1Right - sel1Left) + "px"; //$NON-NLS-1$
     // end of fine tuning
 
+    var zIndexOfHighlight = 2;
+    var highlightOpacity = 0.25;
+
     // Remove all highlights if there exist any
     this._divs.forEach(function(div) {
       div.remove();
@@ -8049,7 +8052,10 @@ define("orion/editor/textView", [  //$NON-NLS-1$
     // DIV 1 - for first line selection
     var div = util.createElement(this._view._parent.ownerDocument, "div"); //$NON-NLS-1$
     div.style.position = 'absolute';
+    div.style.pointerEvents = 'none';
     div.style.backgroundColor = color;
+    div.style.opacity = highlightOpacity;
+    div.style.zIndex = zIndexOfHighlight;
     div.style.height = this._view._getLineHeight() + 'px';
     div.style.top = ((this._view._getLineHeight() * startLineNumber) + 4) + 'px';
     div.style.left = ((7.2246 * (start - lineOffsets[startLineNumber])) + 2) + 'px';
@@ -8070,7 +8076,10 @@ define("orion/editor/textView", [  //$NON-NLS-1$
     // DIV 2 - for middle block
     var div2 = util.createElement(this._view._parent.ownerDocument, "div"); //$NON-NLS-1$
     div2.style.position = 'absolute';
+    div2.style.pointerEvents = 'none';
     div2.style.backgroundColor = color;
+    div2.style.opacity = highlightOpacity;
+    div2.style.zIndex = zIndexOfHighlight;
     div2.style.height = (this._view._getLineHeight() * (endLineNumber - startLineNumber - 1)) + 'px';
     div2.style.top = ((this._view._getLineHeight() * (startLineNumber + 1)) + 4) + 'px';
     div2.style.left = '2px';
@@ -8081,7 +8090,10 @@ define("orion/editor/textView", [  //$NON-NLS-1$
     // DIV 3 - 
     var div3 = util.createElement(this._view._parent.ownerDocument, "div"); //$NON-NLS-1$
     div3.style.position = 'absolute';
+    div3.style.pointerEvents = 'none';
     div3.style.backgroundColor = color;
+    div3.style.opacity = highlightOpacity;
+    div3.style.zIndex = zIndexOfHighlight;
     div3.style.height = this._view._getLineHeight() + 'px';
     div3.style.top = ((this._view._getLineHeight() * (endLineNumber)) + 4) + 'px';
     div3.style.left = '2px';
