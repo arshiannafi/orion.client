@@ -631,7 +631,10 @@ define(['orion/collab/collabPeer', 'orion/collab/ot', 'orion/uiUtils'], function
         var peer = this.collabClient.getPeer(clientId);
         var name = peer ? peer.name : undefined;
         color = peer ? peer.color : color;
+        
         this.updateLineAnnotation(clientId, selection, name, color);
+        this.updateCursorView(clientId, selection, name, color);
+        
         var self = this;
         return {
             clear: function() {
@@ -639,6 +642,28 @@ define(['orion/collab/collabPeer', 'orion/collab/ot', 'orion/uiUtils'], function
             }
         };
     };
+
+    OrionEditorAdapter.prototype.updateCursorView = function(id, selection, name, color, force) {
+      
+      // Extracting 'highlight' information out of 'selection' object
+      var ranges = selection.ranges[0];
+      
+      var textView = this.collabClient.textView;
+      textView._makeHL(ranges.anchor, ranges.head, color);
+      
+      
+      
+      // // get text view of collab clinet
+      // var textView = this.collabClient.textView;
+      // // Calling a funciton from textview
+      // textView._myfunctionfromtv();
+      
+      // // another version of bottom code
+      //textView.setSelection(highlight.anchor, highlight.head);
+      
+      // // highlights but has functions (user begins to edit this. we dont want that. we want simply highlight)
+      // this.editor.showSelection(highlight.anchor, highlight.head, 0, 0, 0);
+    }
 
     OrionEditorAdapter.prototype.updateLineAnnotation = function(id, selection, name, color, force) {
         force = !!force;

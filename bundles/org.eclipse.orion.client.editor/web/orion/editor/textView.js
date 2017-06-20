@@ -494,7 +494,7 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 					view._focusOffset = end.offset;
 					view._ignoreSelect = false;
 					if (sel.rangeCount > 0) { sel.removeAllRanges(); }
-					sel.addRange(range);
+					sel.addRange(range); // arshi this is where the selection is updating
 					view._ignoreSelect = true;
 				}
 				if (view._cursorDiv) {
@@ -7956,10 +7956,133 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 				this.redraw();
 				this._resetLineWidth();
 			}
-		}
+		},
+    _makeHL: function (start, end, color) {
+      
+      if (this._hl === undefined) {
+        this._hl = new DOMHighlight(this);
+      }
+      
+      this._hl.mark(start, end, color);
+      
+      // hl.update();
+    },
+    _createHighlightDiv: function() {
+      var div = util.createElement(this._parent.ownerDocument, "div"); //$NON-NLS-1$
+      return div;
+    }
 	};//end prototype
+  
+  function DOMHighlight (view) {
+    this._view = view;
+    this._divs = [];
+  }
+  
+  DOMHighlight.prototype.mark = function(start, end, color) {
+    
+    var model = this._view._model._model;
+    var _parent = this._view._clipDiv || this._view._rootDiv;
+    
+
+
+    
+    this._divs.forEach(function(div) {
+      div.remove();
+    });
+    this._divs = [];
+
+
+    
+    
+    
+    var array = model._lineOffsets;
+    var target = start;
+
+    
+    var arraylen = array.length;
+    var low = 0;
+    var high = arraylen - 1;
+
+    // var iprev = 0;
+    var i = 0;
+
+    if (target > 0 && target !== null && target !== undefined) {
+      // console.log('in search')
+
+
+
+      i = Math.floor(arraylen / 2);
+
+      while (true) {
+
+
+
+
+
+        i = Math.floor((low + high) / 2);
+        // console.log(i);
+
+        if (target > array[arraylen - 1]) {
+          // console.log('case: arraylen - 1');
+          i = arraylen - 1;
+          // console.log(i);
+          break;
+        }
+
+        if (target === array[i]) {
+          // console.log('case: target === array[i]');
+
+          break;
+        }
+
+        if (target === array[i+1]) {
+          // console.log('case: target === array[i+1]');
+          i++;
+          break;
+        }
+
+        if (array[i] < target && target < array[i + 1]) {
+          // console.log('case: in the middle');
+          break;
+        } else {
+          if (array[i] > target) {
+            high = i;
+          }
+          if (target > array[i + 1]) {
+            low = i;
+          }
+        }
+
+
+      }
+    }
+    
+    
+
+    
+    
+    var div = this._view._createHighlightDiv();
+    div.style.marginTop = ((this._view._getLineHeight() * i) + 4) + 'px';
+    div.style.height = '14px';
+    div.style.marginLeft = ((7.224 * (start - array[i])) + 2) + 'px';
+    div.style.backgroundColor = color;
+    // 7.224
+    div.style.width = ((end - start) * 7.224) + 'px';
+    
+    
+    
+    
+    
+    
+    _parent.appendChild(div);
+    
+    this._divs.push(div);
+    console.log(this);
+    
+    
+  }
+
 	mEventTarget.EventTarget.addMixin(TextView.prototype);
 	
 	return {TextView: TextView};
 });
-
