@@ -7966,10 +7966,6 @@ define("orion/editor/textView", [  //$NON-NLS-1$
       this._hl.mark(start, end, color);
       
       // hl.update();
-    },
-    _createHighlightDiv: function() {
-      var div = util.createElement(this._parent.ownerDocument, "div"); //$NON-NLS-1$
-      return div;
     }
 	};//end prototype
   
@@ -7978,107 +7974,131 @@ define("orion/editor/textView", [  //$NON-NLS-1$
     this._divs = [];
   }
   
+  DOMHighlight.prototype.getLineNumberOfChar = function(targetChar) {
+    
+    var array = this._view._model._model._lineOffsets;
+    var arraylen = array.length;
+    var low = 0;
+    var high = arraylen - 1;
+
+    var i = 0;
+
+    if (targetChar > 0 && targetChar !== null && targetChar !== undefined) {
+      
+      i = Math.floor(arraylen / 2);
+      
+      while (true) {
+        
+        i = Math.floor((low + high) / 2);
+
+        if (targetChar > array[arraylen - 1]) {
+          i = arraylen - 1;
+          break;
+        }
+
+        if (targetChar === array[i]) {
+          break;
+        }
+
+        if (targetChar === array[i+1]) {
+          i++;
+          break;
+        }
+
+        if (array[i] < targetChar && targetChar < array[i + 1]) {
+          break;
+        } else {
+          if (array[i] > targetChar) {
+            high = i;
+          }
+          if (targetChar > array[i + 1]) {
+            low = i;
+          }
+        }
+      }
+    }
+    
+    return i;
+  }
+    
   DOMHighlight.prototype.mark = function(start, end, color) {
     
+    // Get references and store them in local variables
     var model = this._view._model._model;
     var _parent = this._view._clipDiv || this._view._rootDiv;
+    var lineOffsets = model._lineOffsets;
     
+    // TODO new code for fine tuning
+    var clientRect = this._view._clientDiv.getBoundingClientRect();
+    // console.log(clientRect.right);
+    // var sel1Right = right;
+    // sel1Div.style.width = Math.max(0, sel1Right - sel1Left) + "px"; //$NON-NLS-1$
+    // end of fine tuning
 
-
-    
+    // Remove all highlights if there exist any
     this._divs.forEach(function(div) {
       div.remove();
     });
     this._divs = [];
 
-
+    // get line number of 'start' and 'end' location of the highlight
+    var startLineNumber = this.getLineNumberOfChar(start);
+    var endLineNumber = this.getLineNumberOfChar(end);
     
     
-    
-    var array = model._lineOffsets;
-    var target = start;
-
-    
-    var arraylen = array.length;
-    var low = 0;
-    var high = arraylen - 1;
-
-    // var iprev = 0;
-    var i = 0;
-
-    if (target > 0 && target !== null && target !== undefined) {
-      // console.log('in search')
-
-
-
-      i = Math.floor(arraylen / 2);
-
-      while (true) {
-
-
-
-
-
-        i = Math.floor((low + high) / 2);
-        // console.log(i);
-
-        if (target > array[arraylen - 1]) {
-          // console.log('case: arraylen - 1');
-          i = arraylen - 1;
-          // console.log(i);
-          break;
-        }
-
-        if (target === array[i]) {
-          // console.log('case: target === array[i]');
-
-          break;
-        }
-
-        if (target === array[i+1]) {
-          // console.log('case: target === array[i+1]');
-          i++;
-          break;
-        }
-
-        if (array[i] < target && target < array[i + 1]) {
-          // console.log('case: in the middle');
-          break;
-        } else {
-          if (array[i] > target) {
-            high = i;
-          }
-          if (target > array[i + 1]) {
-            low = i;
-          }
-        }
-
-
-      }
-    }
-    
-    
-
-    
-    
-    var div = this._view._createHighlightDiv();
-    div.style.marginTop = ((this._view._getLineHeight() * i) + 4) + 'px';
-    div.style.height = '14px';
-    div.style.marginLeft = ((7.224 * (start - array[i])) + 2) + 'px';
+    // DIV 1 - for first line selection
+    var div = util.createElement(this._view._parent.ownerDocument, "div"); //$NON-NLS-1$
+    div.style.position = 'absolute';
     div.style.backgroundColor = color;
-    // 7.224
-    div.style.width = ((end - start) * 7.224) + 'px';
+    div.style.height = this._view._getLineHeight() + 'px';
+    div.style.top = ((this._view._getLineHeight() * startLineNumber) + 4) + 'px';
+    div.style.left = ((7.2246 * (start - lineOffsets[startLineNumber])) + 2) + 'px';
+    // Magic constant for width. (1 char = 7.2246 px)
+    
+    if (startLineNumber === endLineNumber) {
+      // If selection is in one line
+      div.style.width = ((end - start) * 7.2246) + 'px';
+    } else {
+      // If selection spans multiple lines,
+      // make div1 select only first line
+      // and use div 2 for middle block and div 3 for trailing end
+      div.style.width = '100%';
+    }
+    // End of div 1
+
+
+    // DIV 2 - for middle block
+    var div2 = util.createElement(this._view._parent.ownerDocument, "div"); //$NON-NLS-1$
+    div2.style.position = 'absolute';
+    div2.style.backgroundColor = color;
+    div2.style.height = (this._view._getLineHeight() * (endLineNumber - startLineNumber - 1)) + 'px';
+    div2.style.top = ((this._view._getLineHeight() * (startLineNumber + 1)) + 4) + 'px';
+    div2.style.left = '2px';
+    div2.style.width = '100%';
+    // End of div 2
     
     
-    
-    
+    // DIV 3 - 
+    var div3 = util.createElement(this._view._parent.ownerDocument, "div"); //$NON-NLS-1$
+    div3.style.position = 'absolute';
+    div3.style.backgroundColor = color;
+    div3.style.height = this._view._getLineHeight() + 'px';
+    div3.style.top = ((this._view._getLineHeight() * (endLineNumber)) + 4) + 'px';
+    div3.style.left = '2px';
+    div3.style.width = (7.2246 * (end - lineOffsets[endLineNumber])) + 'px';
+    // End of div 3
     
     
     _parent.appendChild(div);
-    
     this._divs.push(div);
-    console.log(this);
     
+    _parent.appendChild(div2);
+    this._divs.push(div2);
+  
+    if (startLineNumber !== endLineNumber) {
+      _parent.appendChild(div3);
+      this._divs.push(div3);
+    }
     
   }
 
