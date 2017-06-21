@@ -586,17 +586,6 @@ define(['orion/collab/collabPeer', 'orion/collab/ot', 'orion/uiUtils'], function
         var lastLine = this.model.getLineCount()-1;
         var lineStartOffset = this.model.getLineStart(currLine);
 
-        // TODO @arshiannafi dicuss the decision then delete the code
-        //
-        // if (offset) {
-        //     //decide whether or not it is worth sending (if line has changed or needs updating).
-        //     if (currLine !== this.myLine || currLine === lastLine || currLine === 0) {
-        //         // Send this change
-        //     } else {
-        //         return;
-        //     }
-        // }
-
         this.myLine = currLine;
 
         // Self-tracking
@@ -633,7 +622,7 @@ define(['orion/collab/collabPeer', 'orion/collab/ot', 'orion/uiUtils'], function
         color = peer ? peer.color : color;
         
         this.updateLineAnnotation(clientId, selection, name, color);
-        this.updateCursorView(clientId, selection, name, color);
+        this.updateHighlight(clientId, selection, name, color);
         
         var self = this;
         return {
@@ -643,26 +632,11 @@ define(['orion/collab/collabPeer', 'orion/collab/ot', 'orion/uiUtils'], function
         };
     };
 
-    OrionEditorAdapter.prototype.updateCursorView = function(id, selection, name, color, force) {
-      
+    OrionEditorAdapter.prototype.updateHighlight = function(id, selection, name, color, force) {
       // Extracting 'highlight' information out of 'selection' object
       var ranges = selection.ranges[0];
       
-      var textView = this.collabClient.textView;
-      textView._makeHL(ranges.anchor, ranges.head, color);
-      
-      
-      
-      // // get text view of collab clinet
-      // var textView = this.collabClient.textView;
-      // // Calling a funciton from textview
-      // textView._myfunctionfromtv();
-      
-      // // another version of bottom code
-      //textView.setSelection(highlight.anchor, highlight.head);
-      
-      // // highlights but has functions (user begins to edit this. we dont want that. we want simply highlight)
-      // this.editor.showSelection(highlight.anchor, highlight.head, 0, 0, 0);
+      this.collabClient.textView._addHighlight(id, color, ranges.anchor, ranges.head);
     }
 
     OrionEditorAdapter.prototype.updateLineAnnotation = function(id, selection, name, color, force) {

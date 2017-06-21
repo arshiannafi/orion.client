@@ -5962,6 +5962,7 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 
 			/* Destroy DOM */
 			this._domSelection = null;
+			this._domHighlight = null;
 			this._clipboardDiv = null;
 			this._rootDiv = null;
 			this._scrollDiv = null;
@@ -7365,6 +7366,14 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 				}
 			}
 		},
+    /**
+     * Update highlights
+     */
+    _updateDOMHighlight: function() {
+      if (this._domHighlight) {
+        this._domHighlight.update();
+      }
+    },
 		_update: function(hScrollOnly) {
 			if (this._redrawCount > 0) { return; }
 			if (this._updateTimer) {
@@ -7747,7 +7756,9 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 					}
 				}
 			}
+      
 			this._updateDOMSelection();
+      this._updateDOMHighlight();
 
 			if (needUpdate) {
 				var ensureCaretVisible = this._ensureCaretVisible;
@@ -7957,86 +7968,106 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 				this._resetLineWidth();
 			}
 		},
-    _makeHL: function (start, end, color) {
-      
-      if (this._hl === undefined) {
-        this._hl = new DOMHighlight(this);
+    /**
+     * Called from 'otAdapter.js'. Initiates work on highlight on the 'textView'
+     *
+     * @param {String} id - Peer id
+     * @param {String} color - Color that will be used for highlight peer's selection
+     * @param {Int} start - Char where peer's selection started
+     * @param {Int} end - Char where peer's selection ended
+     */
+    _addHighlight: function(id, color, start, end) {
+      // if the instance of 'textView' doesnt have an instance of DOMHighlight,
+      // then create one
+      if (this._domHighlight === undefined) {
+        this._domHighlight = new DOMHighlight(this);
       }
-      
-      this._hl.mark(start, end, color);
-      
-      // hl.update();
+
+      // Add highlight
+      this._domHighlight.addHighlight(id, color, start, end);
     }
-	};//end prototype
+	};
   
-  function DOMHighlight (view) {
+  /**
+   * This class manages collab peer's highlights on user's screen
+   */
+  function DOMHighlight(view) {
+    // List of class variables and functions
+    //
+    // Variables
+    //   _view
+    //   _divs
+    //   _highlights
+    //
+    // Constructor
+    //   DOMHighlight(view)
+    //
+    // Function
+    //   addHighlight
+    //   update
+    //   destroy
+    //
+    
+    /**
+     * Reference to parent 'textView' instance
+     */
     this._view = view;
+
+    /**
+     * Array of all child 'divs' that (together) creates highlight
+     */
     this._divs = [];
+
+    /**
+     * Data structure that stores all highlights.
+     * This also enforces rendering of only one highlight at a time.
+     * Even though collab peers can highlight multiple sections on their side.
+     * 
+     * _highlights = [
+     *   idOfUser1: {
+     *     'color': 'hexString',
+     *     'start': int,
+     *     'end': int
+     *   },
+     *   idOfUser2: {
+     *     ...
+     *   },
+     *   ...
+     * ]
+     */
+    this._highlights = [];
+    
   }
-  
-  DOMHighlight.prototype.getLineNumberOfChar = function(targetChar) {
+
+  /**
+   * This function adds peer's highlight on the screen
+   */
+  DOMHighlight.prototype.addHighlight = function(id, color, start, end) {
     
-    var array = this._view._model._model._lineOffsets;
-    var arraylen = array.length;
-    var low = 0;
-    var high = arraylen - 1;
+    // Add/update data structure
+    this._highlights[id] = {
+      'color': color,
+      'start': start,
+      'end': end
+    };
 
-    var i = 0;
-
-    if (targetChar > 0 && targetChar !== null && targetChar !== undefined) {
-      
-      i = Math.floor(arraylen / 2);
-      
-      while (true) {
-        
-        i = Math.floor((low + high) / 2);
-
-        if (targetChar > array[arraylen - 1]) {
-          i = arraylen - 1;
-          break;
-        }
-
-        if (targetChar === array[i]) {
-          break;
-        }
-
-        if (targetChar === array[i+1]) {
-          i++;
-          break;
-        }
-
-        if (array[i] < targetChar && targetChar < array[i + 1]) {
-          break;
-        } else {
-          if (array[i] > targetChar) {
-            high = i;
-          }
-          if (targetChar > array[i + 1]) {
-            low = i;
-          }
-        }
-      }
-    }
-    
-    return i;
+    // Update the views
+    this.update();
   }
-    
-  DOMHighlight.prototype.mark = function(start, end, color) {
-    
-    // Get references and store them in local variables
-    var model = this._view._model._model;
-    var _parent = this._view._clipDiv || this._view._rootDiv;
-    var lineOffsets = model._lineOffsets;
-    
-    // TODO new code for fine tuning
-    var clientRect = this._view._clientDiv.getBoundingClientRect();
-    // console.log(clientRect.right);
-    // var sel1Right = right;
-    // sel1Div.style.width = Math.max(0, sel1Right - sel1Left) + "px"; //$NON-NLS-1$
-    // end of fine tuning
 
+  /**
+   * This function updates highlight views
+   */
+  DOMHighlight.prototype.update = function() {
+    // CSS Variables
     var zIndexOfHighlight = 2;
     var highlightOpacity = 0.25;
+
+    // Get references and store them in local variables
+    var model = this._view._model;
+    var parent = this._view._clipDiv;
+    var lineOffsets = model._model._lineOffsets;
+
 
     // Remove all highlights if there exist any
     this._divs.forEach(function(div) {
@@ -8044,74 +8075,112 @@ define("orion/editor/textView", [  //$NON-NLS-1$
     });
     this._divs = [];
 
-    // get line number of 'start' and 'end' location of the highlight
-    var startLineNumber = this.getLineNumberOfChar(start);
-    var endLineNumber = this.getLineNumberOfChar(end);
-    
-    
-    // DIV 1 - for first line selection
-    var div = util.createElement(this._view._parent.ownerDocument, "div"); //$NON-NLS-1$
-    div.style.position = 'absolute';
-    div.style.pointerEvents = 'none';
-    div.style.backgroundColor = color;
-    div.style.opacity = highlightOpacity;
-    div.style.zIndex = zIndexOfHighlight;
-    div.style.height = this._view._getLineHeight() + 'px';
-    div.style.top = ((this._view._getLineHeight() * startLineNumber) + 4) + 'px';
-    div.style.left = ((7.2246 * (start - lineOffsets[startLineNumber])) + 2) + 'px';
-    // Magic constant for width. (1 char = 7.2246 px)
-    
-    if (startLineNumber === endLineNumber) {
-      // If selection is in one line
-      div.style.width = ((end - start) * 7.2246) + 'px';
-    } else {
-      // If selection spans multiple lines,
-      // make div1 select only first line
-      // and use div 2 for middle block and div 3 for trailing end
-      div.style.width = '100%';
-    }
-    // End of div 1
+
+    // For all highlights
+    for (var h in this._highlights) {
+
+      // store start, end, and color in local variable
+      var start = this._highlights[h].start;
+      var end = this._highlights[h].end;
+      var color = this._highlights[h].color;
+
+      // Dimension constants
+      var lineHeight = this._view._getLineHeight();
+      var charWidth = 7.2246;
+
+      // get line number of 'start' and 'end' (char location) of the highlight
+      var startLineNumber = model.getLineAtOffset(start);
+      var endLineNumber = model.getLineAtOffset(end);
+      // Convert them from 'line number' to 'px'
+      var startpx = startLineNumber * lineHeight;
+      var endpx = endLineNumber * lineHeight;
+
+      // Relative position in the document
+      // that is currently at the top edge of the view
+      var toppx = this._view.getTopPixel();
+
+      var divVoffset = 0;
+      if (toppx === 0) {
+        divVoffset = 4;
+      }
 
 
-    // DIV 2 - for middle block
-    var div2 = util.createElement(this._view._parent.ownerDocument, "div"); //$NON-NLS-1$
-    div2.style.position = 'absolute';
-    div2.style.pointerEvents = 'none';
-    div2.style.backgroundColor = color;
-    div2.style.opacity = highlightOpacity;
-    div2.style.zIndex = zIndexOfHighlight;
-    div2.style.height = (this._view._getLineHeight() * (endLineNumber - startLineNumber - 1)) + 'px';
-    div2.style.top = ((this._view._getLineHeight() * (startLineNumber + 1)) + 4) + 'px';
-    div2.style.left = '2px';
-    div2.style.width = '100%';
-    // End of div 2
-    
-    
-    // DIV 3 - 
-    var div3 = util.createElement(this._view._parent.ownerDocument, "div"); //$NON-NLS-1$
-    div3.style.position = 'absolute';
-    div3.style.pointerEvents = 'none';
-    div3.style.backgroundColor = color;
-    div3.style.opacity = highlightOpacity;
-    div3.style.zIndex = zIndexOfHighlight;
-    div3.style.height = this._view._getLineHeight() + 'px';
-    div3.style.top = ((this._view._getLineHeight() * (endLineNumber)) + 4) + 'px';
-    div3.style.left = '2px';
-    div3.style.width = (7.2246 * (end - lineOffsets[endLineNumber])) + 'px';
-    // End of div 3
-    
-    
-    _parent.appendChild(div);
-    this._divs.push(div);
-    
-    _parent.appendChild(div2);
-    this._divs.push(div2);
-  
-    if (startLineNumber !== endLineNumber) {
-      _parent.appendChild(div3);
-      this._divs.push(div3);
-    }
-    
+      // DIV 1 - for first line selection
+      var div = util.createElement(this._view._parent.ownerDocument, "div"); //$NON-NLS-1$
+      div.style.position = 'absolute';
+      div.style.pointerEvents = 'none';
+      div.style.backgroundColor = color;
+      div.style.opacity = highlightOpacity;
+      div.style.zIndex = zIndexOfHighlight;
+      div.style.height = this._view._getLineHeight() + 'px';
+      div.style.top = (startpx - toppx + divVoffset) + 'px';
+      div.style.left = ((charWidth * (start - lineOffsets[startLineNumber])) + 2) + 'px';
+
+      if (startLineNumber === endLineNumber) {
+        // If selection is in one line
+        div.style.width = ((end - start) * charWidth) + 'px';
+      } else {
+        // If selection spans multiple lines,
+        // make div1 select only first line
+        // and use div 2 for middle block and div 3 for trailing end
+        div.style.width = '100%';
+      }
+      // End of div 1
+
+
+      // DIV 2 - for middle block
+      var div2 = util.createElement(this._view._parent.ownerDocument, "div"); //$NON-NLS-1$
+      div2.style.position = 'absolute';
+      div2.style.pointerEvents = 'none';
+      div2.style.backgroundColor = color;
+      div2.style.opacity = highlightOpacity;
+      div2.style.zIndex = zIndexOfHighlight;
+      div2.style.height = ((endpx - toppx) - (startpx - toppx) - lineHeight) + 'px';
+      div2.style.top = (startpx - toppx + lineHeight + divVoffset) + 'px';
+      div2.style.left = '2px';
+      div2.style.width = '100%';
+      // End of div 2
+
+
+      // DIV 3 - for trailing end
+      var div3 = util.createElement(this._view._parent.ownerDocument, "div"); //$NON-NLS-1$
+      div3.style.position = 'absolute';
+      div3.style.pointerEvents = 'none';
+      div3.style.backgroundColor = color;
+      div3.style.opacity = highlightOpacity;
+      div3.style.zIndex = zIndexOfHighlight;
+      div3.style.height = this._view._getLineHeight() + 'px';
+      div3.style.top = (endpx - toppx + divVoffset) + 'px';
+      div3.style.left = '2px';
+      div3.style.width = (charWidth * (end - lineOffsets[endLineNumber])) + 'px';
+      // End of div 3
+
+
+      // Append Child
+      parent.appendChild(div);
+      this._divs.push(div);
+
+      parent.appendChild(div2);
+      this._divs.push(div2);
+
+      if (startLineNumber !== endLineNumber) {
+        parent.appendChild(div3);
+        this._divs.push(div3);
+      }
+
+    } // end of loop
+
+  } // End of DOMHighlight.update()
+
+  DOMHighlight.prototype.destroy = function() {
+    // Remove all highlight divs
+    this._divs.forEach(function(div) {
+      div.remove();
+    });
+
+    this._view = null;
+    this._divs = null;
+    this._highlights = null;
   }
 
 	mEventTarget.EventTarget.addMixin(TextView.prototype);
