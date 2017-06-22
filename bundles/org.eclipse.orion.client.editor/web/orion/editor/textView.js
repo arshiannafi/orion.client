@@ -5962,7 +5962,7 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 
 			/* Destroy DOM */
 			this._domSelection = null;
-			this._domHighlight = null;
+			this._peerHighlight = null;
 			this._clipboardDiv = null;
 			this._rootDiv = null;
 			this._scrollDiv = null;
@@ -7369,9 +7369,9 @@ define("orion/editor/textView", [  //$NON-NLS-1$
     /**
      * Update highlights
      */
-    _updateDOMHighlight: function() {
-      if (this._domHighlight) {
-        this._domHighlight.update();
+    _updatePeerHighlight: function() {
+      if (this._peerHighlight) {
+        this._peerHighlight.update();
       }
     },
 		_update: function(hScrollOnly) {
@@ -7758,7 +7758,7 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 			}
       
 			this._updateDOMSelection();
-      this._updateDOMHighlight();
+      this._updatePeerHighlight();
 
 			if (needUpdate) {
 				var ensureCaretVisible = this._ensureCaretVisible;
@@ -7977,21 +7977,21 @@ define("orion/editor/textView", [  //$NON-NLS-1$
      * @param {Int} end - Char where peer's selection ended
      */
     _addHighlight: function(id, color, start, end) {
-      // if the instance of 'textView' doesnt have an instance of DOMHighlight,
+      // if the instance of 'textView' doesnt have an instance of PeerHighlight,
       // then create one
-      if (this._domHighlight === undefined) {
-        this._domHighlight = new DOMHighlight(this);
+      if (this._peerHighlight === undefined) {
+        this._peerHighlight = new PeerHighlight(this);
       }
 
       // Add highlight
-      this._domHighlight.addHighlight(id, color, start, end);
+      this._peerHighlight.addHighlight(id, color, start, end);
     }
 	};
   
   /**
    * This class manages collab peer's highlights on user's screen
    */
-  function DOMHighlight(view) {
+  function PeerHighlight(view) {
     // List of class variables and functions
     //
     // Variables
@@ -8000,7 +8000,7 @@ define("orion/editor/textView", [  //$NON-NLS-1$
     //   _highlights
     //
     // Constructor
-    //   DOMHighlight(view)
+    //   PeerHighlight(view)
     //
     // Function
     //   addHighlight
@@ -8042,7 +8042,7 @@ define("orion/editor/textView", [  //$NON-NLS-1$
   /**
    * This function adds peer's highlight on the screen
    */
-  DOMHighlight.prototype.addHighlight = function(id, color, start, end) {
+  PeerHighlight.prototype.addHighlight = function(id, color, start, end) {
     
     // Add/update data structure
     this._highlights[id] = {
@@ -8058,7 +8058,7 @@ define("orion/editor/textView", [  //$NON-NLS-1$
   /**
    * This function updates highlight views
    */
-  DOMHighlight.prototype.update = function() {
+  PeerHighlight.prototype.update = function() {
     // CSS Variables
     var zIndexOfHighlight = 2;
     var highlightOpacity = 0.25;
@@ -8170,9 +8170,9 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 
     } // end of loop
 
-  } // End of DOMHighlight.update()
+  } // End of PeerHighlight.update()
 
-  DOMHighlight.prototype.destroy = function() {
+  PeerHighlight.prototype.destroy = function() {
     // Remove all highlight divs
     this._divs.forEach(function(div) {
       div.remove();
