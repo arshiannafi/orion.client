@@ -8,8 +8,9 @@
         "ttyshell": "INFO",
         "tasks": "INFO",
         "search-worker": "ERROR",
-        "git": "ERROR",
-        "electron": "ALL"
+        "git": "ALL",
+        "electron": "ALL",
+        "response":"ERROR"
     },
     "appenders": [
         {

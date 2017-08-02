@@ -43,7 +43,7 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 	var OrionCollabSocketAdapter = mOtAdapters.OrionCollabSocketAdapter;
 	var OrionEditorAdapter = mOtAdapters.OrionEditorAdapter;
 	var CollabPeer = mCollabPeer.CollabPeer;
-	
+
 	// ms to delay updating collaborator annotation.
 	// We need this delay because the annotation is updated asynchronizedly and is transferd in multiple
 	// packages. We don't want the UI to refresh too frequently.
@@ -55,7 +55,7 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 
 	/**
 	 * Creates a new collaboration client.
-	 * @class 
+	 * @class
 	 * @name orion.collabClient.CollabClient
 	 */
 	function CollabClient(editor, inputManager, fileClient, serviceRegistry, commandRegistry, preferences) {
@@ -131,7 +131,7 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 		 */
 		initClientInfo: function(callback) {
 			var self = this;
-			var userService = this.serviceRegistry.getService("orion.core.user"); 
+			var userService = this.serviceRegistry.getService("orion.core.user");
 			var authServices = this.serviceRegistry.getServiceReferences("orion.core.auth");
 			var authService = this.serviceRegistry.getService(authServices[0]);
 			authService.getUser().then(function(jsonData) {
@@ -140,7 +140,8 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 					self.clientDisplayedName = accountData.FullName || username;
 					var MASK = 0xFFFFFF + 1;
 					var MAGIC = 161803398 / 2 % MASK;
-					self.clientId = username + '.' + (Date.now() % MASK * MAGIC % MASK).toString(16);
+					self.clientId = username + '.' + guid.substr(0, 4);
+
 					callback();
 				}, function(err) {
 					console.error(err);
@@ -184,19 +185,20 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 
 		/**
 		 * Add or update a record of collaborator file annotation and request to update UI
-		 * 
+		 *
 		 * @param {string} clientId
 		 * @param {string} url
 		 * @param {boolean} editing
 		 */
-		addOrUpdateCollabFileAnnotation: function(clientId, url, editing) {
+		addOrUpdateCollabFileAnnotation: function(clientId, contextP, url, editing) {
+
 			var peer = this.getPeer(clientId);
 			// Peer might be loading. Once it is loaded, this annotation will be automatically updated,
 			// so we can safely leave it blank.
 			var name = (peer && peer.name) ? peer.name : 'Unknown';
 			var color = (peer && peer.color) ? peer.color : '#000000';
 			if (url) {
-				url = this.getFileSystemPrefix() + url;
+				url = contextP + this.getFileSystemPrefix() + url;
 			}
 			this.collabFileAnnotations[clientId] = new CollabFileAnnotation(name, color, url, this.projectRelativeLocation(url), editing);
 			this._requestFileAnnotationUpdate();
@@ -204,7 +206,7 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 
 		/**
 		 * Remove a collaborator's file annotation by id and request to update UI
-		 * 
+		 *
 		 * @param {string} clientId -
 		 */
 		removeCollabFileAnnotation: function(clientId) {
@@ -255,7 +257,7 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 
 		/**
 		 * Determine whether a client has a file annotation
-		 * 
+		 *
 		 * @return {boolean} -
 		 */
 		collabHasFileAnnotation: function(clientId) {
@@ -264,7 +266,7 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 
 		/**
 		 * Get the client's file annotation
-		 * 
+		 *
 		 * @return {CollabFileAnnotation} -
 		 */
 		getCollabFileAnnotation: function(clientId) {
@@ -276,13 +278,13 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 		 */
 		updateSelfFileAnnotation: function() {
 			if (this.collabMode) {
-				this.addOrUpdateCollabFileAnnotation(this.getClientId(), contextPath + this.currentDoc(), this.editing);
+				this.addOrUpdateCollabFileAnnotation(this.getClientId(), contextPath, this.currentDoc(), this.editing);
 			}
 		},
 
 		/**
 		 * Add or update peer record
-		 * 
+		 *
 		 * @param {CollabPeer} peer -
 		 */
 		addOrUpdatePeer: function(peer) {
@@ -295,7 +297,7 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 			}
 			if (this.collabHasFileAnnotation(peer.id)) {
 				var annotation = this.getCollabFileAnnotation(peer.id);
-				this.addOrUpdateCollabFileAnnotation(peer.id, annotation.location);
+				this.addOrUpdateCollabFileAnnotation(peer.id, contextPath, annotation.location);
 			}
 			if (this.otOrionAdapter && this.textView) {
 				// Make sure we have view installed
@@ -305,7 +307,7 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 
 		/**
 		 * Get peer by id
-		 * 
+		 *
 		 * @return {CollabPeer} -
 		 */
 		getPeer: function(clientId) {
@@ -341,7 +343,9 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 			if (this.ot) {
 				this.otOrionAdapter.detach();
 			}
+			var selection = this.textView.getSelection();
 			this.textView.getModel().setText(operation[0], 0);
+			this.textView.setSelection(selection.start, selection.end);
 			this.otOrionAdapter = new OrionEditorAdapter(this.editor, this, AT);
 			this.ot = new ot.EditorClient(revision, clients, this.otSocketAdapter, this.otOrionAdapter, this.getClientId());
 			// Give initial cursor position
@@ -386,12 +390,24 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 			ruler = this.editor._overviewRuler;
 			ruler.addAnnotationType(AT.ANNOTATION_COLLAB_LINE_CHANGED, 1);
 			this.textView = this.editor.getTextView();
+			if (this.viewFocusHandlerTarget) {
+				this.viewFocusHandlerTarget.removeEventListener('Focus', this.viewFocusHandler);
+				this.viewFocusHandlerTarget = this.viewFocusHandler = null;
+			}
+			this.textView.addEventListener('Focus', this.viewFocusHandler = function() {
+				self.sendCurrentLocation();
+			});
+			this.viewFocusHandlerTarget = this.textView;
 			if (this.otSocketAdapter) {
 				this.otSocketAdapter.sendInit();
 			}
 		},
 
 		viewUninstalled: function(event) {
+			if (this.viewFocusHandlerTarget) {
+				this.viewFocusHandlerTarget.removeEventListener('Focus', this.viewFocusHandler);
+				this.viewFocusHandlerTarget = this.viewFocusHandler = null;
+			}
 			this.textView = null;
 			this.destroyOT();
 		},
@@ -455,7 +471,7 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 				setTimeout(function() {
 					// Polling until 'close' event is triggered
 					// 'close' event won't wait for any IO operations thus
-					// this.socket should be null in the next event loop 
+					// this.socket should be null in the next event loop
 					self.projectChanged(projectSessionID);
 				}, 0);
 				return;
@@ -492,7 +508,7 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 						'operation': operation,
 						'data': evt[operation],
 						'clientId': this.getClientId(),
-						'guid': guid
+						'guid': this.fileClient.guid || this.guid
 				    };
 					this.otSocketAdapter.send(JSON.stringify(msg));
 				}
@@ -514,7 +530,7 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 		 * Make a event for FileClient by data received from peers. The event
 		 * That this method made also prevent UI changes (e.g. expanding the
 		 * file tree).
-		 * 
+		 *
 		 * @param {stirng} operation
 		 * @param {Array} data
 		 */
@@ -572,7 +588,7 @@ define(['orion/collab/ot', 'orion/collab/collabFileAnnotation', 'orion/collab/ot
 		transformLocation: function(location) { //Location = "/file/orders-api-uselessTesting_X/app.js"
 			var filePath = location.replace(/^.*\/file/, "");
 			var loc = this.getFileSystemPrefix();
-			return loc + filePath;
+			return contextPath + loc + filePath;
 		},
 
 		/*
